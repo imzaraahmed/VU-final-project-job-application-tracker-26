@@ -9,6 +9,10 @@ import JobApplicationPage from "./pages/JobApplications";
 import EditJobApplicationPage from "./pages/EditJobApplications";
 import AddJobApplicationPage from "./pages/AddJobApplications";
 import LoginPage from "./pages/Login";
+import Joblist from "./pages/Joblist";
+import Addjob from "./pages/Addjob";
+import Editjob from "./pages/Editjob";
+import Jobdetail from "./pages/Jobdetail";
 
 
 
@@ -32,6 +36,11 @@ function App() {
       
  
       <Route path="/editjobapplication/:id" element={<EditJobApplicationPage />} />
+
+        <Route path="/jobs" element={<Joblist />} />
+        <Route path="/addjob" element={<Addjob />} />
+        <Route path="/job/:id" element={<Jobdetail />} />
+        <Route path="/editjob/:id" element={<Editjob />} />
 
         <Route path="/reminders" element={<ReminderPage />} />
 

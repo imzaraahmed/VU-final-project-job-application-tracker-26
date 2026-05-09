@@ -74,12 +74,12 @@ useEffect(() => {
     <div className="p-6">
               <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-3xl font-bold">Job Application List</h1>
+          <h1 className="text-3xl font-bold">Users List</h1>
 
         </div>
 
       <Link to={`/addjobapplication`}>
-      <Button>Add New Job Application</Button>
+      <Button>Add New User</Button>
       </Link>
       </div>
       

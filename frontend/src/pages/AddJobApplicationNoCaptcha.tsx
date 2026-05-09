@@ -101,7 +101,7 @@ export default function AddJobApplicationNoCaptchaPage() {
     <div className="p-6">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-3xl font-bold">Add Job Application</h1>
+          <h1 className="text-3xl font-bold">Add User</h1>
 
         </div>
 

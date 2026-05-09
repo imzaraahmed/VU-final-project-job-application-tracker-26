@@ -147,7 +147,7 @@ export default function EditJobApplicationPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-3xl font-bold">Edit Job Application</h1>
+          <h1 className="text-3xl font-bold">Edit User</h1>
   
         </div>
 

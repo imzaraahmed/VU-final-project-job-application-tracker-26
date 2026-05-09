@@ -5,6 +5,9 @@ const multer = require("multer");
 const path = require("path");
 const axios = require('axios');
 
+/** MySQL table for applicant accounts (formerly `job_application`) */
+const USERS_TABLE = "`users`";
+
 // =============================
 // Multer Storage Configuration
 // =============================
@@ -47,7 +50,7 @@ router.post("/login", (req, res) => {
 
   const sql = `
     SELECT id, first_name, last_name, email
-    FROM job_application
+    FROM ${USERS_TABLE}
     WHERE email = ? AND password = ?
     LIMIT 1
   `;
@@ -79,7 +82,7 @@ router.post("/login", (req, res) => {
 // =============================
 router.get("/:id", (req, res) => {
   db.query(
-    "SELECT * FROM job_application WHERE id = ?",
+    `SELECT * FROM ${USERS_TABLE} WHERE id = ?`,
     [req.params.id],
     (err, result) => {
       if (err) return res.status(500).json(err);
@@ -118,7 +121,7 @@ router.put("/:id", upload.single("resume"), (req, res) => {
   if (resumePath) {
     // If new resume uploaded
     sql = `
-      UPDATE job_application
+      UPDATE ${USERS_TABLE}
       SET first_name=?, last_name=?, email=?, phone=?, position=?, 
           available_start_date=?, employment_status=?, resume=?
       WHERE id=?
@@ -138,7 +141,7 @@ router.put("/:id", upload.single("resume"), (req, res) => {
   } else {
     // If no resume uploaded
     sql = `
-      UPDATE job_application
+      UPDATE ${USERS_TABLE}
       SET first_name=?, last_name=?, email=?, phone=?, position=?, 
           available_start_date=?, employment_status=?
       WHERE id=?
@@ -172,7 +175,7 @@ router.put("/:id", upload.single("resume"), (req, res) => {
 // GET All Applicants
 // =============================
 router.get("/", (req, res) => {
-  const sql = "SELECT * FROM job_application";
+  const sql = `SELECT * FROM ${USERS_TABLE}`;
 
   db.query(sql, (err, results) => {
     if (err) {
@@ -257,7 +260,7 @@ router.post("/", upload.single("resume"), async (req, res) => {
     
 
     const sql = `
-      INSERT INTO job_application 
+      INSERT INTO ${USERS_TABLE} 
       (first_name, last_name, email, phone, position, 
        available_start_date, employment_status, resume, password)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -304,7 +307,7 @@ router.post("/", upload.single("resume"), async (req, res) => {
 router.delete("/:id", (req, res) => {
   const { id } = req.params;
     // Delete the applicant from the database
-    const deleteSql = "DELETE FROM job_application WHERE id = ?";
+    const deleteSql = `DELETE FROM ${USERS_TABLE} WHERE id = ?`;
     db.query(deleteSql, [id], (err, result) => {
       if (err) return res.status(500).json(err);
       res.json({ message: "Applicant deleted successfully" });

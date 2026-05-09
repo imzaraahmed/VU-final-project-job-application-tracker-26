@@ -6,6 +6,7 @@ import { Link } from "react-router-dom"
 import { useState } from "react"
 import axios from "axios"
 import { useNavigate } from "react-router-dom"
+import { setSessionUser, type SessionUser } from "@/lib/sessionUser"
 
 export default function LoginPage() {
   const navigate = useNavigate()
@@ -20,10 +21,23 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      await axios.post("http://localhost:5000/api/jobApplications/login", {
-        email,
-        password,
-      })
+      const res = await axios.post<{ message?: string; user: SessionUser }>(
+        "http://localhost:5000/api/jobApplications/login",
+        {
+          email,
+          password,
+        }
+      )
+
+      const u = res.data?.user
+      if (u?.id != null) {
+        setSessionUser({
+          id: Number(u.id),
+          email: String(u.email ?? ""),
+          first_name: String(u.first_name ?? ""),
+          last_name: String(u.last_name ?? ""),
+        })
+      }
 
       navigate("/")
     } catch (err) {
