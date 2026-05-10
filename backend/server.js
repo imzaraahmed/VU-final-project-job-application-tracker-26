@@ -2,8 +2,17 @@ const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 
+const { getJwtSecret } = require("./services/jwt");
+
+try {
+  getJwtSecret();
+} catch (e) {
+  console.error("Server cannot start:", e.message);
+  process.exit(1);
+}
 
 const jobApplications = require("./routes/jobapplications");
+const auth = require("./routes/auth");
 const jobs = require("./routes/jobs");
 const reminders = require("./routes/reminders");
 const notifications = require("./routes/notifications");
@@ -15,6 +24,8 @@ app.use(cors());
 app.use(express.json());
 app.use("/uploads", express.static("uploads"));
 
+/** JWT-backed session helpers (`/api/auth/me`, etc.) */
+app.use("/api/auth", auth);
 
 /** Applicant signup/list/edit/login — backed by MySQL table `users` */
 app.use("/api/jobApplications", jobApplications);

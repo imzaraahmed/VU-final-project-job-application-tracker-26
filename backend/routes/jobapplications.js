@@ -3,7 +3,9 @@ const router = express.Router();
 const db = require("../db");
 const multer = require("multer");
 const path = require("path");
-const axios = require('axios');
+const axios = require("axios");
+const bcrypt = require("bcrypt");
+const { signAccessToken, getExpiresIn } = require("../services/jwt");
 
 /** MySQL table for applicant accounts (formerly `job_application`) */
 const USERS_TABLE = "`users`";
@@ -37,7 +39,7 @@ const upload = multer({
 });
 
 // =============================
-// LOGIN Applicant
+// LOGIN Applicant (JWT + optional bcrypt hashes)
 // =============================
 router.post("/login", (req, res) => {
   const { email, password } = req.body;
@@ -49,17 +51,16 @@ router.post("/login", (req, res) => {
   }
 
   const sql = `
-    SELECT id, first_name, last_name, email
+    SELECT id, first_name, last_name, email, password AS password_hash
     FROM ${USERS_TABLE}
-    WHERE email = ? AND password = ?
+    WHERE email = ?
     LIMIT 1
   `;
 
-  db.query(sql, [email, password], (err, result) => {
+  db.query(sql, [email], async (err, result) => {
     if (err) {
       return res.status(500).json({
         message: "Database error",
-        details: err,
       });
     }
 
@@ -69,9 +70,49 @@ router.post("/login", (req, res) => {
       });
     }
 
+    const row = result[0];
+    const stored = row.password_hash;
+
+    let passwordOk = false;
+    try {
+      if (typeof stored === "string" && stored.startsWith("$2")) {
+        passwordOk = await bcrypt.compare(String(password), stored);
+      } else {
+        passwordOk = stored === password;
+      }
+    } catch {
+      passwordOk = false;
+    }
+
+    if (!passwordOk) {
+      return res.status(401).json({
+        message: "Invalid email or password",
+      });
+    }
+
+    const user = {
+      id: row.id,
+      first_name: row.first_name,
+      last_name: row.last_name,
+      email: row.email,
+    };
+
+    let token;
+    try {
+      token = signAccessToken(user);
+    } catch (e) {
+      console.error("JWT sign:", e.message);
+      return res.status(500).json({
+        message: "Authentication misconfiguration",
+      });
+    }
+
     return res.status(200).json({
       message: "Login successful",
-      user: result[0],
+      token,
+      token_type: "Bearer",
+      expires_in: getExpiresIn(),
+      user,
     });
   });
 });
@@ -215,8 +256,6 @@ router.post("/", upload.single("resume"), async (req, res) => {
       captchaToken, // coming from frontend
     } = req.body;
 
-    console.log(password)
-
     // =============================
     // 1️⃣ Verify reCAPTCHA First
     // =============================
@@ -255,9 +294,19 @@ router.post("/", upload.single("resume"), async (req, res) => {
     }
 
     // =============================
-    // 3️⃣ Insert Into Database
+    // 3️⃣ Hash password + insert into database
     // =============================
-    
+    let hashedPassword = password;
+    try {
+      if (password != null && String(password).length > 0) {
+        hashedPassword = await bcrypt.hash(String(password), 12);
+      }
+    } catch (hashErr) {
+      console.error("Password hash error:", hashErr);
+      return res.status(500).json({
+        message: "Could not process password",
+      });
+    }
 
     const sql = `
       INSERT INTO ${USERS_TABLE} 
@@ -275,7 +324,7 @@ router.post("/", upload.single("resume"), async (req, res) => {
       available_start_date,
       employment_status,
       resumePath,
-      password,
+      hashedPassword,
     ];
 
     db.query(sql, values, (err, result) => {

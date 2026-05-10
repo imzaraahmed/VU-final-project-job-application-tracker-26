@@ -5,11 +5,26 @@ import { Label } from "@/components/ui/label"
 import { Link } from "react-router-dom"
 import { useState } from "react"
 import axios from "axios"
-import { useNavigate } from "react-router-dom"
-import { setSessionUser, type SessionUser } from "@/lib/sessionUser"
+import { useNavigate, useLocation } from "react-router-dom"
+import { API_BASE_URL } from "@/lib/api"
+import { setAuthToken, setSessionUser, type SessionUser } from "@/lib/sessionUser"
+
+type LoginResponse = {
+  message?: string
+  token?: string
+  user: SessionUser
+}
 
 export default function LoginPage() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const rawFrom = (location.state as { from?: unknown } | null)?.from
+  const redirectTo =
+    typeof rawFrom === "string" &&
+    rawFrom.startsWith("/") &&
+    !rawFrom.startsWith("//")
+      ? rawFrom
+      : "/dashboard"
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
@@ -21,8 +36,8 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      const res = await axios.post<{ message?: string; user: SessionUser }>(
-        "http://localhost:5000/api/jobApplications/login",
+      const res = await axios.post<LoginResponse>(
+        `${API_BASE_URL}/api/jobApplications/login`,
         {
           email,
           password,
@@ -30,7 +45,15 @@ export default function LoginPage() {
       )
 
       const u = res.data?.user
+      const token = res.data?.token
+
+      if (typeof token !== "string" || !token) {
+        setError("Login response missing token.")
+        return
+      }
+
       if (u?.id != null) {
+        setAuthToken(token)
         setSessionUser({
           id: Number(u.id),
           email: String(u.email ?? ""),
@@ -39,7 +62,7 @@ export default function LoginPage() {
         })
       }
 
-      navigate("/")
+      navigate(redirectTo)
     } catch (err) {
       if (axios.isAxiosError(err)) {
         const backendMessage =

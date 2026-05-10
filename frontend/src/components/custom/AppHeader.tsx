@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { NavLink, useLocation, useNavigate } from "react-router-dom"
-import { LayoutDashboard, Users, Bell, Megaphone, CalendarClock } from "lucide-react"
+import { LayoutDashboard, Users, Bell, Megaphone, CalendarClock, UserCircle } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -12,7 +12,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { clearSessionUser, getSessionUser, sessionDisplayName } from "@/lib/sessionUser"
+import {
+  clearSessionUser,
+  getSessionUser,
+  isAdminEmailUser,
+  sessionDisplayName,
+} from "@/lib/sessionUser"
 import {
   fetchNotifications,
   fetchUnreadNotificationCount,
@@ -38,6 +43,15 @@ export default function AppHeader() {
   const [previewLoading, setPreviewLoading] = useState(false)
 
   const userId = session?.id ?? null
+  const showUsersNav = isAdminEmailUser(session)
+  const loggedIn = Boolean(session)
+  const onLoginPage = location.pathname === "/login"
+  const onRegisterPage = location.pathname === "/register"
+  const onLandingPage = location.pathname === "/"
+  const hideEntryNavLinks =
+    onLoginPage ||
+    onRegisterPage ||
+    (onLandingPage && !loggedIn)
 
   const refreshUnread = useCallback(async () => {
     if (!userId) {
@@ -112,30 +126,47 @@ export default function AppHeader() {
           <div className="text-xl font-bold">Job Application Tracker</div>
 
           <nav className="flex flex-wrap items-center gap-4 sm:gap-6">
-            <NavLink to="/" className={navClass}>
-              <LayoutDashboard size={18} />
-              Dashboard
-            </NavLink>
+            {!hideEntryNavLinks ? (
+              <NavLink to="/dashboard" className={navClass}>
+                <LayoutDashboard size={18} />
+                Dashboard
+              </NavLink>
+            ) : null}
 
-            <NavLink to="/jobapplications" className={navClass}>
-              <Users size={18} />
-              Users
-            </NavLink>
+            {showUsersNav ? (
+              <NavLink to="/jobapplications" className={navClass}>
+                <Users size={18} />
+                Users
+              </NavLink>
+            ) : null}
 
-            <NavLink to="/jobs" className={navClass}>
-              <Megaphone size={18} />
-              Jobs
-            </NavLink>
+            {!hideEntryNavLinks ? (
+              <NavLink to="/jobs" className={navClass}>
+                <Megaphone size={18} />
+                Jobs
+              </NavLink>
+            ) : null}
 
-            <NavLink to="/reminders" className={navClass}>
-              <CalendarClock size={18} />
-              Reminders
-            </NavLink>
+            {loggedIn ? (
+              <NavLink to="/reminders" className={navClass}>
+                <CalendarClock size={18} />
+                Reminders
+              </NavLink>
+            ) : null}
 
-            <NavLink to="/notifications" className={navClass}>
-              <Bell size={18} />
-              Notifications
-            </NavLink>
+            {loggedIn ? (
+              <NavLink to="/notifications" className={navClass}>
+                <Bell size={18} />
+                Notifications
+              </NavLink>
+            ) : null}
+
+            {loggedIn ? (
+              <NavLink to="/account" className={navClass}>
+                <UserCircle size={18} />
+                Account
+              </NavLink>
+            ) : null}
           </nav>
         </div>
 
@@ -216,6 +247,10 @@ export default function AppHeader() {
                 Log out
               </Button>
             </>
+          ) : onLoginPage ? (
+            <Button type="button" variant="outline" size="sm" asChild>
+              <NavLink to="/register">Register</NavLink>
+            </Button>
           ) : (
             <Button type="button" variant="outline" size="sm" asChild>
               <NavLink to="/login">Log in</NavLink>

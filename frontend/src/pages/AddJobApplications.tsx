@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select"
-import { Link, useNavigate } from "react-router-dom"
+import { Link, useLocation, useNavigate } from "react-router-dom"
 
 import axios from "axios"
 import { useState } from "react"
@@ -29,6 +29,8 @@ type JobApplication = {
 
 export default function AddJobApplicationPage() {
   const navigate = useNavigate()
+  const { pathname } = useLocation()
+  const cancelHref = pathname === "/register" ? "/" : "/jobapplications"
 
   const [jobApplication, setJobApplication] = useState<JobApplication>({
     first_name: "",
@@ -123,7 +125,7 @@ export default function AddJobApplicationPage() {
         </div>
 
         <div className="flex gap-4">
-          <Link to="/jobapplications">
+          <Link to={cancelHref}>
             <Button variant="outline">Cancel</Button>
           </Link>
 
