@@ -3,6 +3,7 @@ import AppHeader from "./components/custom/AppHeader";
 
 import DashboardPage from "./pages/Dashboard";
 import ReminderPage from "./pages/Reminders";
+import NotificationsPage from "./pages/Notifications";
 
 
 import JobApplicationPage from "./pages/JobApplications";
@@ -43,6 +44,7 @@ function App() {
         <Route path="/editjob/:id" element={<Editjob />} />
 
         <Route path="/reminders" element={<ReminderPage />} />
+        <Route path="/notifications" element={<NotificationsPage />} />
 
         <Route path="/login" element={<LoginPage />} />
 
