@@ -1,4 +1,4 @@
-# Job Application Tracker - Prototype
+# Job Application Tracker - Final
 
 - Back-end (Node.js + Express)
 - Front-end (React + Shadcn/ui)
