@@ -1,6 +1,7 @@
 import axios from "axios"
+import { API_BASE_URL } from "@/lib/api"
 
-const JOBS_URL = "http://localhost:5000/api/jobs"
+const JOBS_URL = `${API_BASE_URL}/api/jobs`
 
 /** Allowed `jobs.status` values (keep in sync with backend ALLOWED_JOB_STATUSES) */
 export const JOB_STATUS_OPTIONS = [
@@ -73,6 +74,61 @@ export type JobDocument = {
   type: JobDocumentType
   file_path: string
   created_at: string
+}
+
+export type DashboardStatusSlice = {
+  key: string
+  label: string
+  count: number
+}
+
+/** Which `jobs.status` value each dashboard “scheduled” count uses (from API). */
+export type DashboardScheduledBindings = {
+  interviews_scheduled: string
+  tests_scheduled: string
+}
+
+export type DashboardStats = {
+  /** All job rows for the user (every status). */
+  total_applications: number
+  offers_received: number
+  interviews_scheduled: number
+  tests_scheduled: number
+  scheduled_status_bindings: DashboardScheduledBindings
+  success_rate_percent: number
+  not_applied_count?: number
+  status_distribution: DashboardStatusSlice[]
+}
+
+export async function fetchDashboardStats(userId: number): Promise<DashboardStats> {
+  const res = await axios.get<{
+    total_applications: number
+    offers_received: number
+    interviews_scheduled: number
+    tests_scheduled: number
+    scheduled_status_bindings?: DashboardScheduledBindings
+    success_rate_percent: number
+    not_applied_count?: number
+    status_distribution: DashboardStatusSlice[]
+  }>(`${JOBS_URL}/dashboard-stats?user_id=${encodeURIComponent(String(userId))}`)
+  const d = res.data
+  const bindings = d.scheduled_status_bindings ?? {
+    interviews_scheduled: "Interview Call",
+    tests_scheduled: "Test Call",
+  }
+  return {
+    total_applications: Number(d.total_applications ?? 0),
+    offers_received: Number(d.offers_received ?? 0),
+    interviews_scheduled: Number(d.interviews_scheduled ?? 0),
+    tests_scheduled: Number(d.tests_scheduled ?? 0),
+    scheduled_status_bindings: {
+      interviews_scheduled: String(bindings.interviews_scheduled ?? "Interview Call"),
+      tests_scheduled: String(bindings.tests_scheduled ?? "Test Call"),
+    },
+    success_rate_percent: Number(d.success_rate_percent ?? 0),
+    not_applied_count: d.not_applied_count != null ? Number(d.not_applied_count) : undefined,
+    status_distribution: Array.isArray(d.status_distribution) ? d.status_distribution : [],
+  }
 }
 
 export async function fetchJobs(forUserId?: number): Promise<Job[]> {

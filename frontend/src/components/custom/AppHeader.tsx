@@ -1,6 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { NavLink, useLocation, useNavigate } from "react-router-dom"
-import { LayoutDashboard, Users, Bell, Megaphone, CalendarClock, UserCircle } from "lucide-react"
+import {
+  Briefcase,
+  LayoutDashboard,
+  Users,
+  Bell,
+  Megaphone,
+  CalendarClock,
+  UserCircle,
+} from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -123,7 +131,17 @@ export default function AppHeader() {
       <div className="flex items-center justify-between px-6 py-4">
         {/* Left Section */}
         <div className="flex items-center gap-10">
-          <div className="text-xl font-bold">Job Application Tracker</div>
+          <div className="flex items-center gap-2.5">
+            <span
+              className="bg-primary/10 text-primary ring-primary/20 flex size-9 shrink-0 items-center justify-center rounded-lg ring-1"
+              aria-hidden
+            >
+              <Briefcase className="size-[1.35rem]" strokeWidth={2} />
+            </span>
+            <span className="text-xl font-bold leading-tight">
+              Job Application Tracker
+            </span>
+          </div>
 
           <nav className="flex flex-wrap items-center gap-4 sm:gap-6">
             {!hideEntryNavLinks ? (
@@ -164,7 +182,7 @@ export default function AppHeader() {
             {loggedIn ? (
               <NavLink to="/account" className={navClass}>
                 <UserCircle size={18} />
-                Account
+                My Profile
               </NavLink>
             ) : null}
           </nav>

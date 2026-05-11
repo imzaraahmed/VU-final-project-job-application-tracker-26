@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import axios from "axios"
+import { Link, useNavigate } from "react-router-dom"
+import { Eye } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -52,6 +54,7 @@ function emptyForm(): ReminderFormState {
 }
 
 export default function ReminderPage() {
+  const navigate = useNavigate()
   const [reminders, setReminders] = useState<Reminder[]>([])
   const [jobs, setJobs] = useState<Job[]>([])
   const [loading, setLoading] = useState(true)
@@ -67,6 +70,12 @@ export default function ReminderPage() {
   const session = useMemo(() => getSessionUser(), [])
 
   const userId = session?.id ?? null
+
+  const jobById = useMemo(() => {
+    const m = new Map<number, Job>()
+    for (const j of jobs) m.set(j.job_id, j)
+    return m
+  }, [jobs])
 
   const loadData = async () => {
     if (!userId) {
@@ -96,14 +105,6 @@ export default function ReminderPage() {
   useEffect(() => {
     void loadData()
   }, [userId])
-
-  const openAddDialog = () => {
-    setEditingReminder(null)
-    setForm(emptyForm())
-    setFormErrors({})
-    setSaveError(null)
-    setDialogOpen(true)
-  }
 
   const openEditDialog = (item: Reminder) => {
     setEditingReminder(item)
@@ -198,7 +199,13 @@ export default function ReminderPage() {
           <h1 className="text-3xl font-bold">Reminders</h1>
           <p className="text-sm text-muted-foreground mt-1">Track follow-ups, interview dates, and deadlines.</p>
         </div>
-        <Button type="button" onClick={openAddDialog} disabled={!userId}>
+        <Button
+          type="button"
+          disabled={!userId}
+          onClick={() => {
+            navigate("/jobs")
+          }}
+        >
           Add reminder
         </Button>
       </div>
@@ -213,39 +220,88 @@ export default function ReminderPage() {
         <CardHeader>
           <CardTitle className="text-base">All reminders</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className={reminders.length === 0 ? "space-y-3" : undefined}>
           {reminders.length === 0 ? (
             <p className="text-sm text-muted-foreground">No reminders yet.</p>
           ) : (
-            reminders.map((item) => (
-              <div key={item.id} className="rounded border p-3 flex flex-wrap items-start justify-between gap-4">
-                <div className="space-y-1">
-                  <p className="font-medium">{item.title}</p>
-                  <p className="text-sm text-muted-foreground">{item.description || "No description"}</p>
-                  <p className="text-xs text-muted-foreground">
-                    Remind at: {toDateTimeLocalInputValue(item.snoozed_until ?? item.reminder_datetime) || "—"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Status: <span className="capitalize">{item.status}</span>
-                    {item.job_id ? ` | Job ID: ${item.job_id}` : ""}
-                  </p>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {reminders.map((item) => {
+              const fallbackJob =
+                item.job_id != null ? jobById.get(item.job_id) ?? null : null
+              const position =
+                (item.job_title ?? fallbackJob?.job_title)?.trim() || null
+              const company =
+                (item.company_name ?? fallbackJob?.company_name)?.trim() ||
+                null
+
+              return (
+                <div
+                  key={item.id}
+                  className="flex h-full flex-col gap-3 rounded border bg-muted/50 p-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between"
+                >
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <p className="font-semibold">{item.title}</p>
+                    <p className="mb-2 text-sm text-foreground">
+                      {item.description || "No description"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Remind at:{" "}
+                      {toDateTimeLocalInputValue(
+                        item.snoozed_until ?? item.reminder_datetime
+                      ) || "—"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Status: <span className="capitalize">{item.status}</span>
+                    </p>
+                  </div>
+                  <div className="flex min-w-0 flex-col gap-2 sm:shrink-0 sm:items-end">
+                    <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                      {item.job_id != null ? (
+                        <Button type="button" variant="outline" size="sm" asChild>
+                          <Link
+                            to={`/job/${item.job_id}`}
+                            className="inline-flex items-center gap-1.5"
+                          >
+                            <Eye className="size-3.5 shrink-0" aria-hidden />
+                            View job
+                          </Link>
+                        </Button>
+                      ) : null}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openEditDialog(item)}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={deletingId === item.id}
+                        onClick={() => void handleDelete(item.id)}
+                      >
+                        {deletingId === item.id ? "Deleting..." : "Delete"}
+                      </Button>
+                    </div>
+                    {item.job_id != null ? (
+                      <div className="w-full space-y-0.5 text-xs sm:w-auto sm:text-right">
+                        <p className="min-w-0 break-words">
+                          <span className="text-muted-foreground">Position: </span>
+                          <span className="text-foreground">{position ?? "—"}</span>
+                        </p>
+                        <p className="min-w-0 break-words">
+                          <span className="text-muted-foreground">Company: </span>
+                          <span className="text-foreground">{company ?? "—"}</span>
+                        </p>
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button type="button" variant="outline" size="sm" onClick={() => openEditDialog(item)}>
-                    Edit
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={deletingId === item.id}
-                    onClick={() => void handleDelete(item.id)}
-                  >
-                    {deletingId === item.id ? "Deleting..." : "Delete"}
-                  </Button>
-                </div>
-              </div>
-            ))
+              )
+            })}
+            </div>
           )}
         </CardContent>
       </Card>

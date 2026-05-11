@@ -1,9 +1,18 @@
 import { useEffect, useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import axios from "axios"
+import { Building2, MapPin } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import {
   fetchJob,
   fetchJobDocuments,
@@ -121,10 +130,18 @@ export default function Jobdetail() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold">{job.job_title}</h1>
-          <p className="text-muted-foreground mt-1">
-            {job.company_name}
-            {job.job_location ? ` · ${job.job_location}` : ""}
-          </p>
+          <div className="text-muted-foreground mt-2 flex flex-wrap items-center gap-x-5 gap-y-1 text-base">
+            <span className="inline-flex min-w-0 items-center gap-2">
+              <Building2 className="size-5 shrink-0 opacity-90" aria-hidden />
+              <span className="min-w-0">{job.company_name}</span>
+            </span>
+            {job.job_location?.trim() ? (
+              <span className="inline-flex min-w-0 items-center gap-2">
+                <MapPin className="size-5 shrink-0 opacity-90" aria-hidden />
+                <span className="min-w-0">{job.job_location}</span>
+              </span>
+            ) : null}
+          </div>
         </div>
         <div className="flex flex-wrap gap-2">
           <Link to="/jobs">
@@ -137,42 +154,44 @@ export default function Jobdetail() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <Card>
+        <Card className="md:col-span-2">
           <CardHeader>
             <CardTitle className="text-base">Summary</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <div className="flex justify-between gap-4">
-              <span className="text-muted-foreground">Job ID</span>
-              <span>{job.job_id}</span>
-            </div>
-            <div className="flex justify-between gap-4">
-              <span className="text-muted-foreground">User ID</span>
-              <span>{job.user_id ?? "—"}</span>
-            </div>
-            <div className="flex justify-between gap-4">
-              <span className="text-muted-foreground">Type</span>
-              <span>{job.job_type ?? "—"}</span>
-            </div>
-            <div className="flex justify-between gap-4">
-              <span className="text-muted-foreground">Status</span>
-              <span className="text-right">{normalizeJobStatus(job.status)}</span>
-            </div>
-            <div className="flex justify-between gap-4">
-              <span className="text-muted-foreground">Salary</span>
-              <span className="text-right">{job.salary_range ?? "—"}</span>
-            </div>
-            <div className="flex justify-between gap-4">
-              <span className="text-muted-foreground">Posted</span>
-              <span>{formatDisplayDate(job.posted_date)}</span>
-            </div>
-            <div className="flex justify-between gap-4">
-              <span className="text-muted-foreground">Deadline</span>
-              <span>{formatDisplayDate(job.application_deadline)}</span>
-            </div>
-            <div className="flex justify-between gap-4">
-              <span className="text-muted-foreground">Created</span>
-              <span className="text-right break-all">{job.created_at ? formatDisplayDate(job.created_at) : "—"}</span>
+          <CardContent>
+            <div className="overflow-x-auto rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="whitespace-nowrap">Type</TableHead>
+                    <TableHead className="whitespace-nowrap">Status</TableHead>
+                    <TableHead className="whitespace-nowrap">Salary</TableHead>
+                    <TableHead className="whitespace-nowrap">Posted</TableHead>
+                    <TableHead className="whitespace-nowrap">Deadline</TableHead>
+                    <TableHead className="whitespace-nowrap">Created</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow>
+                    <TableCell>{job.job_type ?? "—"}</TableCell>
+                    <TableCell className="min-w-[9rem]">
+                      {normalizeJobStatus(job.status)}
+                    </TableCell>
+                    <TableCell className="min-w-[7rem]">
+                      {job.salary_range ?? "—"}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      {formatDisplayDate(job.posted_date)}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      {formatDisplayDate(job.application_deadline)}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      {job.created_at ? formatDisplayDate(job.created_at) : "—"}
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
             </div>
           </CardContent>
         </Card>

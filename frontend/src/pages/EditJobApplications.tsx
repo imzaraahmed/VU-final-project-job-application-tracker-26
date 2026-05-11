@@ -134,7 +134,7 @@ export default function EditJobApplicationPage() {
         })
       }
 
-      navigate("/jobapplications")
+      navigate("/dashboard")
     } catch (err) {
       console.error("Failed to save profile:", err)
     } finally {

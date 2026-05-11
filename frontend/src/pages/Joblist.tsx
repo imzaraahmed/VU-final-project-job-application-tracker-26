@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link, useLocation } from "react-router-dom"
 import axios from "axios"
-import { Eye, Pencil, Trash2 } from "lucide-react"
+import { BellPlus, Eye, MapPin, Pencil, PencilLine, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
 import { fetchJobs, normalizeJobStatus, removeJob, toDateInputValue, type Job } from "@/lib/jobsApi"
+import { getJobStatusDisplay } from "@/lib/jobStatusDisplay"
 import {
   createReminder,
   fetchReminders,
@@ -225,8 +226,7 @@ export default function Joblist() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>ID</TableHead>
-              <TableHead>Title</TableHead>
+              <TableHead>Position</TableHead>
               <TableHead>Company</TableHead>
               <TableHead>Location</TableHead>
               <TableHead>Type</TableHead>
@@ -240,47 +240,98 @@ export default function Joblist() {
 
           <TableBody>
             {jobs.length > 0 ? (
-              jobs.map((job) => (
-                <TableRow key={job.job_id}>
-                  <TableCell>{job.job_id}</TableCell>
-                  <TableCell className="font-medium max-w-[220px] truncate">{job.job_title}</TableCell>
-                  <TableCell>{job.company_name}</TableCell>
-                  <TableCell className="max-w-[160px] truncate">{job.job_location ?? "—"}</TableCell>
-                  <TableCell>{job.job_type ?? "—"}</TableCell>
-                  <TableCell className="max-w-[180px] truncate">{normalizeJobStatus(job.status)}</TableCell>
-                  <TableCell>{formatDisplayDate(job.posted_date)}</TableCell>
-                  <TableCell>{formatDisplayDate(job.application_deadline)}</TableCell>
-                  <TableCell>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      disabled={!session}
-                      onClick={() => openReminderDialogForJob(job)}
-                    >
-                      {job.job_id != null && remindersByJobId[job.job_id] ? "Edit reminder" : "Add reminder"}
-                    </Button>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex justify-center gap-3">
-                      <Link to={`/job/${job.job_id}`} title="View">
-                        <Eye className="w-4 h-4 cursor-pointer text-muted-foreground hover:text-foreground" />
-                      </Link>
-                      <Link to={`/editjob/${job.job_id}`} title="Edit">
-                        <Pencil className="w-4 h-4 cursor-pointer text-blue-600 hover:text-blue-800" />
-                      </Link>
-                      <Trash2
-                        className="w-4 h-4 cursor-pointer text-red-600 hover:text-red-800"
-                        title="Delete"
-                        onClick={() => void handleDelete(job.job_id)}
-                      />
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
+              jobs.map((job) => {
+                const jobStatus = normalizeJobStatus(job.status)
+                const { Icon: StatusIcon, iconClass } =
+                  getJobStatusDisplay(jobStatus)
+                const hasReminder =
+                  job.job_id != null && Boolean(remindersByJobId[job.job_id])
+                return (
+                  <TableRow key={job.job_id}>
+                    <TableCell className="font-medium max-w-[220px] truncate">
+                      {job.job_title}
+                    </TableCell>
+                    <TableCell>{job.company_name}</TableCell>
+                    <TableCell className="max-w-[200px]">
+                      <span className="text-muted-foreground flex min-w-0 items-start gap-1.5">
+                        <MapPin
+                          className="mt-0.5 size-3.5 shrink-0 opacity-90"
+                          aria-hidden
+                        />
+                        <span className="text-foreground min-w-0 truncate">
+                          {job.job_location?.trim()
+                            ? job.job_location
+                            : "—"}
+                        </span>
+                      </span>
+                    </TableCell>
+                    <TableCell>{job.job_type ?? "—"}</TableCell>
+                    <TableCell className="max-w-[220px]">
+                      <span className="flex min-w-0 items-center gap-2">
+                        <StatusIcon
+                          className={`size-4 shrink-0 ${iconClass}`}
+                          aria-hidden
+                        />
+                        <span className="truncate">{jobStatus}</span>
+                      </span>
+                    </TableCell>
+                    <TableCell>{formatDisplayDate(job.posted_date)}</TableCell>
+                    <TableCell>
+                      {formatDisplayDate(job.application_deadline)}
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className={
+                          hasReminder
+                            ? "gap-1.5 border-violet-200 text-violet-700 hover:border-violet-300 hover:bg-violet-50 hover:text-violet-950"
+                            : "gap-1.5"
+                        }
+                        disabled={!session}
+                        onClick={() => openReminderDialogForJob(job)}
+                      >
+                        {hasReminder ? (
+                          <>
+                            <PencilLine
+                              className="size-3.5 shrink-0 text-violet-600 group-hover/button:text-violet-800"
+                              aria-hidden
+                            />
+                            Edit reminder
+                          </>
+                        ) : (
+                          <>
+                            <BellPlus
+                              className="size-3.5 shrink-0"
+                              aria-hidden
+                            />
+                            Add reminder
+                          </>
+                        )}
+                      </Button>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex justify-center gap-3">
+                        <Link to={`/job/${job.job_id}`} title="View">
+                          <Eye className="text-muted-foreground hover:text-foreground h-4 w-4 cursor-pointer" />
+                        </Link>
+                        <Link to={`/editjob/${job.job_id}`} title="Edit">
+                          <Pencil className="h-4 w-4 cursor-pointer text-blue-600 hover:text-blue-800" />
+                        </Link>
+                        <Trash2
+                          className="h-4 w-4 cursor-pointer text-red-600 hover:text-red-800"
+                          title="Delete"
+                          onClick={() => void handleDelete(job.job_id)}
+                        />
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )
+              })
             ) : (
             <TableRow>
-              <TableCell colSpan={10} className="text-center text-muted-foreground">
+              <TableCell colSpan={9} className="text-center text-muted-foreground">
                 No jobs yet. Add one to get started.
               </TableCell>
             </TableRow>

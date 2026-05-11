@@ -11,7 +11,16 @@ const USERS_TABLE = "`users`";
  */
 router.get("/me", authenticateToken, (req, res) => {
   const sql = `
-    SELECT id, first_name, last_name, email
+    SELECT
+      id,
+      first_name,
+      last_name,
+      email,
+      phone,
+      position,
+      available_start_date,
+      employment_status,
+      resume
     FROM ${USERS_TABLE}
     WHERE id = ?
     LIMIT 1
@@ -32,6 +41,11 @@ router.get("/me", authenticateToken, (req, res) => {
         first_name: row.first_name,
         last_name: row.last_name,
         email: row.email,
+        phone: row.phone ?? null,
+        position: row.position ?? null,
+        available_start_date: row.available_start_date ?? null,
+        employment_status: row.employment_status ?? null,
+        resume: row.resume ?? null,
       },
     });
   });

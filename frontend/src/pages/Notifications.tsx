@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import axios from "axios"
 import { Link } from "react-router-dom"
+import { Bell } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -20,6 +21,25 @@ function formatDateTime(value: string | null | undefined): string {
   const d = new Date(value)
   if (Number.isNaN(d.getTime())) return value
   return d.toLocaleString()
+}
+
+const REMINDER_TITLE_PREFIX = "Reminder:"
+
+function NotificationTitle({ title }: { title: string }) {
+  const trimmed = title.trimStart()
+  if (trimmed.startsWith(REMINDER_TITLE_PREFIX)) {
+    const tail = trimmed.slice(REMINDER_TITLE_PREFIX.length).trimStart()
+    return (
+      <span className="flex min-w-0 flex-wrap items-center gap-1.5 font-medium">
+        <Bell className="text-muted-foreground size-3.5 shrink-0 opacity-90" aria-hidden />
+        <span className="min-w-0 break-words">
+          {REMINDER_TITLE_PREFIX}
+          {tail ? ` ${tail}` : ""}
+        </span>
+      </span>
+    )
+  }
+  return <span className="font-medium">{title}</span>
 }
 
 export default function NotificationsPage() {
@@ -140,17 +160,19 @@ export default function NotificationsPage() {
           ) : !userId ? null : items.length === 0 ? (
             <p className="text-muted-foreground text-sm">No notifications yet. Due reminders appear here automatically.</p>
           ) : (
-            <ul className="divide-y rounded-md border">
+            <ul className="grid list-none grid-cols-1 gap-3 p-0 sm:grid-cols-2">
               {items.map((n) => {
                 const unread = isNotificationUnread(n)
                 return (
                   <li
                     key={n.id}
-                    className={`flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-start sm:justify-between ${unread ? "bg-primary/5" : ""}`}
+                    className={`flex h-full flex-col gap-2 rounded border p-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between ${
+                      unread ? "bg-primary/5" : "bg-muted/50"
+                    }`}
                   >
                     <div className="min-w-0 flex-1 space-y-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-medium">{n.title}</span>
+                        <NotificationTitle title={n.title} />
                         {unread ? <Badge variant="default">Unread</Badge> : <Badge variant="secondary">Read</Badge>}
                       </div>
                       <p className="text-muted-foreground text-sm whitespace-pre-wrap">{n.message}</p>

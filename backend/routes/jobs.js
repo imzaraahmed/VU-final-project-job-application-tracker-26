@@ -69,6 +69,35 @@ const ALLOWED_JOB_STATUSES = Object.freeze([
 
 const DEFAULT_JOB_STATUS = "Not Applied";
 
+/** Dashboard cards use these exact `jobs.status` values (subset of ALLOWED_JOB_STATUSES). */
+const DASHBOARD_INTERVIEW_SCHEDULED_STATUS = "Interview Call";
+const DASHBOARD_TEST_SCHEDULED_STATUS = "Test Call";
+
+/**
+ * Read status from mysql2 row (handles Buffers).
+ * @param {unknown} raw
+ * @returns {string}
+ */
+function statusCellToString(raw) {
+  if (raw == null) return "";
+  if (Buffer.isBuffer(raw)) return raw.toString("utf8");
+  return String(raw);
+}
+
+/**
+ * Trim and match ALLOWED_JOB_STATUSES (including case-insensitive fallback).
+ * @param {unknown} raw
+ * @returns {string}
+ */
+function normalizeJobRowStatus(raw) {
+  const t = statusCellToString(raw).trim();
+  if (!t) return "";
+  if (ALLOWED_JOB_STATUSES.includes(t)) return t;
+  const low = t.toLowerCase();
+  const hit = ALLOWED_JOB_STATUSES.find((opt) => opt.toLowerCase() === low);
+  return hit ?? t;
+}
+
 /**
  * @param {unknown} raw
  * @returns {string|null} normalized allowed status or null if invalid / empty when disallowed
@@ -213,6 +242,142 @@ router.get("/", (req, res) => {
       total: rows.length,
       data: rows,
     });
+  });
+});
+
+/**
+ * Map normalized `jobs.status` into dashboard funnel labels (matches analytics UI).
+ * @param {string} s — output of `normalizeJobRowStatus`
+ * @returns {"applied"|"screening"|"interview"|"offer"|"rejected"|"not_applied"|"other"}
+ */
+function dashboardStatusBucketNormalized(s) {
+  if (!s) return "other";
+  if (s === "Not Applied") return "not_applied";
+  if (s === "Applied") return "applied";
+  if (s === "Test Call" || s === "Test Given") return "screening";
+  if (s === "Interview Call" || s === "Interview Given") return "interview";
+  if (s === "Offer Received" || s === "Offer Accepted") return "offer";
+  if (s === "Rejected") return "rejected";
+  return "other";
+}
+
+// ---------------------------------------------------------------------------
+// GET /api/jobs/dashboard-stats — aggregates for dashboard charts/cards
+// Query: user_id (required) — only jobs owned by that user
+// Must be registered BEFORE /:job_id
+// ---------------------------------------------------------------------------
+router.get("/dashboard-stats", (req, res) => {
+  const userId = parseUserId(req.query.user_id);
+  if (userId === null) {
+    return res.status(400).json({ message: "user_id query parameter is required (positive integer)" });
+  }
+
+  const sql = `
+    SELECT status
+    FROM ${JOBS_QTN}
+    WHERE user_id = ?
+  `;
+
+  db.query(sql, [userId], (err, rows) => {
+    if (err) {
+      return res.status(500).json({
+        message: "Database error while loading dashboard stats",
+        details: err.message,
+      });
+    }
+
+    /** @type {Record<string, number>} */
+    const byKey = {
+      applied: 0,
+      screening: 0,
+      interview: 0,
+      offer: 0,
+      rejected: 0,
+      not_applied: 0,
+      other: 0,
+    };
+
+    for (const row of rows) {
+      const st = normalizeJobRowStatus(row.status);
+      const b = dashboardStatusBucketNormalized(st);
+      byKey[b] = (byKey[b] || 0) + 1;
+    }
+
+    const applied = byKey.applied;
+    const screening = byKey.screening;
+    /** Interview bucket: Interview Call + Interview Given (charts & active pipeline). */
+    const interview = byKey.interview;
+    const offer = byKey.offer;
+    const rejected = byKey.rejected;
+
+    /** Every job row for this user (all statuses, including Not Applied and unmapped). */
+    const totalJobsForUser = rows.length;
+
+    /** Success rate: offers vs all tracked jobs for the user. */
+    const successRatePercent =
+      totalJobsForUser > 0 ? Math.round((offer / totalJobsForUser) * 1000) / 10 : 0;
+
+    /** Ordered list for charts */
+    const status_distribution = [
+      { key: "applied", label: "Applied/Screening", count: applied },
+      { key: "screening", label: "Test Scheduled", count: screening },
+      { key: "interview", label: "Interview", count: interview },
+      { key: "offer", label: "Offer", count: offer },
+      { key: "rejected", label: "Rejected", count: rejected },
+    ];
+
+    /** DB-level counts for “scheduled” cards (must match `jobs.status` exactly after TRIM). */
+    const scheduledAggSql = `
+      SELECT
+        COALESCE(
+          SUM(CASE WHEN TRIM(IFNULL(\`status\`, '')) = ? THEN 1 ELSE 0 END),
+          0
+        ) AS interviews_scheduled,
+        COALESCE(
+          SUM(CASE WHEN TRIM(IFNULL(\`status\`, '')) = ? THEN 1 ELSE 0 END),
+          0
+        ) AS tests_scheduled
+      FROM ${JOBS_QTN}
+      WHERE user_id = ?
+    `;
+
+    db.query(
+      scheduledAggSql,
+      [DASHBOARD_INTERVIEW_SCHEDULED_STATUS, DASHBOARD_TEST_SCHEDULED_STATUS, userId],
+      (aggErr, aggRows) => {
+        if (aggErr) {
+          return res.status(500).json({
+            message: "Database error while loading scheduled status counts",
+            details: aggErr.message,
+          });
+        }
+
+        const agg = Array.isArray(aggRows) && aggRows[0] ? aggRows[0] : {};
+        const coercedCount = (v) => {
+          if (v == null) return 0;
+          if (typeof v === "bigint") return Number(v);
+          const n = Number(v);
+          return Number.isFinite(n) ? n : 0;
+        };
+        const interviewsScheduledCount = coercedCount(agg.interviews_scheduled);
+        const testsScheduledCount = coercedCount(agg.tests_scheduled);
+
+        return res.status(200).json({
+          message: "Dashboard stats fetched successfully",
+          total_applications: totalJobsForUser,
+          offers_received: offer,
+          interviews_scheduled: interviewsScheduledCount,
+          tests_scheduled: testsScheduledCount,
+          scheduled_status_bindings: {
+            interviews_scheduled: DASHBOARD_INTERVIEW_SCHEDULED_STATUS,
+            tests_scheduled: DASHBOARD_TEST_SCHEDULED_STATUS,
+          },
+          success_rate_percent: successRatePercent,
+          not_applied_count: byKey.not_applied,
+          status_distribution,
+        });
+      }
+    );
   });
 });
 

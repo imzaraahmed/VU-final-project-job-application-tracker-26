@@ -16,6 +16,9 @@ export type Reminder = {
   snoozed_until: string | null
   created_at: string
   updated_at: string
+  /** From linked job posting (JOIN), when reminder has job_id */
+  job_title?: string | null
+  company_name?: string | null
 }
 
 export type ReminderPayload = {

@@ -82,18 +82,32 @@ router.get("/", (req, res) => {
     });
   }
 
-  const where = ["user_id = ?"];
+  const where = ["r.user_id = ?"];
   const values = [userId];
   if (status) {
-    where.push("status = ?");
+    where.push("r.status = ?");
     values.push(status);
   }
 
   const sql = `
-    SELECT id, user_id, job_id, title, description, reminder_datetime, status, snoozed_until, created_at, updated_at
-    FROM ${REMINDERS_QTN}
+    SELECT
+      r.id,
+      r.user_id,
+      r.job_id,
+      r.title,
+      r.description,
+      r.reminder_datetime,
+      r.status,
+      r.snoozed_until,
+      r.created_at,
+      r.updated_at,
+      j.job_title,
+      j.company_name
+    FROM ${REMINDERS_QTN} AS r
+    LEFT JOIN ${JOBS_QTN} AS j
+      ON j.job_id = r.job_id AND j.user_id = r.user_id
     WHERE ${where.join(" AND ")}
-    ORDER BY COALESCE(snoozed_until, reminder_datetime) ASC, id DESC
+    ORDER BY COALESCE(r.snoozed_until, r.reminder_datetime) ASC, r.id DESC
   `;
 
   db.query(sql, values, (err, rows) => {
@@ -117,9 +131,23 @@ router.get("/:id", (req, res) => {
   }
 
   const sql = `
-    SELECT id, user_id, job_id, title, description, reminder_datetime, status, snoozed_until, created_at, updated_at
-    FROM ${REMINDERS_QTN}
-    WHERE id = ? AND user_id = ?
+    SELECT
+      r.id,
+      r.user_id,
+      r.job_id,
+      r.title,
+      r.description,
+      r.reminder_datetime,
+      r.status,
+      r.snoozed_until,
+      r.created_at,
+      r.updated_at,
+      j.job_title,
+      j.company_name
+    FROM ${REMINDERS_QTN} AS r
+    LEFT JOIN ${JOBS_QTN} AS j
+      ON j.job_id = r.job_id AND j.user_id = r.user_id
+    WHERE r.id = ? AND r.user_id = ?
     LIMIT 1
   `;
   db.query(sql, [reminderId, userId], (err, rows) => {
